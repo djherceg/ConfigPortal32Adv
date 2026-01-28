@@ -10,6 +10,19 @@ InputField myInputs[] = {
   // Basic text input
   { "text", "dev_name", "Device Name", "ESP32-C3", false },
 
+  // Basic text input - Client id
+  { "text", "client_name", "Client Name", "ESP32-C3", false },
+
+  // Basic text input - Client password
+  { "text", "client_pwd", "Client Password", "pwd", false },
+
+  // Basic text input - MQTT Broker Address
+  { "text", "mqtt_url", "Broker address", "broker.net", false },
+
+  // Basic text input - MQTT Broker Address
+  { "number", "mqtt_port", "Broker port", "8883", false },
+
+
   // Checkbox
   { "checkbox", "debug", "Enable Debug", nullptr, true },
 
