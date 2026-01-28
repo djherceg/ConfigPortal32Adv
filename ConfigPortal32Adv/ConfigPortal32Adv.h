@@ -220,23 +220,55 @@ bool getHTML(String* html, char* fname) {
   }
 }
 
+
+/*
+  Function to scan and build HTML dropdown options
+
+  usage:
+    html += "<select name='ssid' id='ssid'>";
+    html += getWiFiDropdownOptions();
+    html += "</select>";
+*/
+String getWiFiDropdownOptions() {
+  String options = "";
+
+  // Start scan
+  int n = WiFi.scanNetworks();
+  if (n == 0) {
+    options += "<option>No networks found</option>";
+  } else {
+    for (int i = 0; i < n; ++i) {
+      String ssid = WiFi.SSID(i);
+      ssid.trim();  // remove stray spaces
+      options += "<option value=\"" + ssid + "\">" + ssid + "</option>";
+    }
+  }
+
+  // Clear scan results to free memory
+  WiFi.scanDelete();
+
+  return options;
+}
+
+
+
 /**
  * @brief Appends an HTML <input> element to the provided HTML string.
  *
- * Supported input types: "text", "password", "checkbox", "radio", "email", "number", "date".
+ * Supported input types: "text", "password", "checkbox", "radio", "email", "number", "date", "ssid".
  * This function dynamically adds an <input> field to the HTML string,
  * allowing customization of the field's name, placeholder text, default value,
  * and optionally the "checked" attribute for checkbox or radio inputs.
  *
  * @param html         Reference to the HTML string to append to.
- * @param type         "text", "password", "checkbox", "radio", "email", "number", "date".
+ * @param type         "text", "password", "checkbox", "radio", "email", "number", "date", "ssid"
  * @param fieldName    Name attribute of the input field.
  * @param placeholder  Placeholder text shown inside the input field (optional).
  * @param fieldValue   Default value of the input field (optional).
  * @param checked      Whether the input should be marked as checked (for checkbox/radio).
  */
 void appendInputField(const char* type, const char* fieldName, const char* placeholder, const char* fieldValue, bool checked = false) {
-  bool isTextual = strcmp(type, "checkbox") != 0 && strcmp(type, "radio") != 0;
+  bool isTextual = strcmp(type, "checkbox") != 0 && strcmp(type, "radio") != 0 && strcmp(type, "ssid") != 0;
   bool isCheckbox = strcmp(type, "checkbox");
 
   if (isTextual) {
@@ -264,11 +296,53 @@ void appendInputField(const char* type, const char* fieldName, const char* place
       webServer.sendContent("</label>");
     }
     webServer.sendContent("</div>");
+  } else if (strcmp(type, "ssid") == 0) {         // WiFi OPTION for selection of available SSIDs
+    // Special handling for SSID dropdown
+    webServer.sendContent("<div class='form-group'>");
+    webServer.sendContent("<label for='");
+    webServer.sendContent(fieldName);
+    webServer.sendContent("'>");
+    if (placeholder && strlen(placeholder) > 0) {
+      webServer.sendContent(placeholder);
+    } else {
+      webServer.sendContent("Select WiFi Network");
+    }
+    webServer.sendContent("</label>");
+    webServer.sendContent("<select name='");
+    webServer.sendContent(fieldName);
+    webServer.sendContent("' id='");
+    webServer.sendContent(fieldName);
+    webServer.sendContent("'>");
+
+    int n = WiFi.scanNetworks();
+    if (n == 0) {
+      webServer.sendContent("<option>No networks found</option>");
+    } else {
+      for (int i = 0; i < n; ++i) {
+        String ssid = WiFi.SSID(i);
+        ssid.trim();
+        webServer.sendContent("<option value='");
+        webServer.sendContent(ssid);
+        webServer.sendContent("'");
+        if (fieldValue && ssid == fieldValue) {
+          webServer.sendContent(" selected");
+        }
+        webServer.sendContent(">");
+        webServer.sendContent(ssid);
+        webServer.sendContent("</option>");
+      }
+    }
+    WiFi.scanDelete();
+
+    webServer.sendContent("</select>");
+    webServer.sendContent("</div>");
+
+
   } else {
     // Fallback for checkbox/radio
 
     webServer.sendContent("<p>");
-    // If checkbox, then send a hidden input to provide the unchecked valu
+    // If checkbox, then send a hidden input to provide the unchecked value
     if (isCheckbox) {
       webServer.sendContent("<input type='hidden' name='");
       webServer.sendContent(fieldName);

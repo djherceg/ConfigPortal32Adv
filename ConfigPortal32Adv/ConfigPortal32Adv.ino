@@ -22,6 +22,9 @@ InputField myInputs[] = {
   // Basic text input - MQTT Broker Address
   { "number", "mqtt_port", "Broker port", "8883", false },
 
+  // SSID list
+
+  { "ssid", "ssid", "Select WiFi network", nullptr, true },
 
   // Checkbox
   { "checkbox", "debug", "Enable Debug", nullptr, true },
