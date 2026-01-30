@@ -3,58 +3,46 @@
 #include "ConfigPortal32Adv.h"
 #include <LittleFS.h>
 
-char* ssid_pfix = (char*)"CaptivePortal";
+
 String user_config_html = "";
 
-InputField myInputs[] = {
+// groupName, input type, name, placeholder string, value (optional), checked (optional)
+ConfigPortal::InputField myInputs[] = {
   // Basic text input
-  { "text", "dev_name", "Device Name", "ESP32-C3", false },
-
-  // Basic text input - Client id
-  { "text", "client_name", "Client Name", "ESP32-C3", false },
-
-  // Basic text input - Client password
-  { "text", "client_pwd", "Client Password", "pwd", false },
-
-  // Basic text input - MQTT Broker Address
-  { "text", "mqtt_url", "Broker address", "broker.net", false },
-
-  // Basic text input - MQTT Broker Address
-  { "number", "mqtt_port", "Broker port", "8883", false },
-
+  { "WiFi", "text", "wifi_ssid", "SSID", "", false },
+  { "WiFi", "password", "wifi_pwd", "Password", "", false },
   // SSID list
-
-  { "ssid", "ssid", "Select WiFi network", nullptr, true },
-
+  { "WiFi", "ssid", "wifi_ssid", "Select WiFi network", nullptr, true },
+  // Basic text input
+  { "Basic", "text", "dev_name", "Device Name", "ESP32-C3", false },
+  // Basic text input - Client id
+  { "Basic", "text", "client_name", "Client Name", "ESP32-C3", false },
+  // Basic text input - Client password
+  { "Basic", "text", "client_pwd", "Client Password", "pwd", false },
+  // Basic text input - MQTT Broker Address
+  { "Basic", "text", "mqtt_url", "Broker address", "broker.net", false },
+  // Basic text input - MQTT Broker Address
+  { "Basic", "number", "mqtt_port", "Broker port", "8883", false },
   // Checkbox
-  { "checkbox", "debug", "Enable Debug", nullptr, true },
-
+  { "Special", "checkbox", "debug", "Enable Debug", nullptr, true },
   // Password field
-  { "password", "admin_pw", "Admin Password", "", false },
-
+  { "Special", "password", "admin_pw", "Admin Password", "", false },
   // Email input
-  { "email", "user_email", "Email Address", "user@example.com", false },
-
+  { "Special", "email", "user_email", "Email Address", "user@example.com", false },
   // Number input
-  { "number", "max_clients", "Max Clients", "5", false },
-
+  { "Special", "number", "max_clients", "Max Clients", "5", false },
   // Date input
-  { "date", "install_date", "Installation Date", "2025-08-15", false },
-
+  { "Date and time", "date", "install_date", "Installation Date", "2025-08-15", false },
   // Time input
-  { "time", "start_time", "Start Time", "08:00", false },
-
+  { "Date and time", "time", "start_time", "Start Time", "08:00", false },
   // Color picker
-  { "color", "theme_color", "Theme Color", "#ff0000", false }
-
+  { "Visuals", "color", "theme_color", "Theme Color", "#ff0000", false }
 };
 
-InputGroup userInputs = {
+ConfigPortal::InputGroup ConfigPortal::userInputs = {
   myInputs,
   sizeof(myInputs) / sizeof(myInputs[0])
 };
-
-
 
 /*
  *  ConfigPortal library to extend and implement the WiFi connected IOT device
@@ -91,24 +79,49 @@ void testLittleFS() {
   file.close();
 }
 
+bool ConfigChanging() {
+  Serial.println("ConfigChanging invoked");
+
+  // check max_clients
+  if (ConfigPortal::cfg.containsKey("max_clients")) {
+    String v = ConfigPortal::cfg["max_clients"];
+    int val = v.toInt();
+    if (val < 0) val = 0;
+    if (val > 5) val = 5;
+    ConfigPortal::cfg["max_clients"] = String(val);
+  }
+
+  return true;
+}
+
+void ConfigChanged() {
+  Serial.println("ConfigChanged invoked");
+}
+
 
 void setup() {
   Serial.begin(115200);
 
   testLittleFS();
 
-  loadConfig();
+  // init the portal
+  ConfigPortal::ssid_pfix = "CaptivePortal";
+
+  ConfigPortal::loadConfig();
+  ConfigPortal::registerConfigChanging(ConfigChanging);
+  ConfigPortal::registerConfigChanged(ConfigChanged);
   // TODO: the configDevice() call needs to be removed in production
-  configDevice();
-  
+  ConfigPortal::serverStart();
+  return;
+
   // *** If no "config" is found or "config" is not "done", run configDevice ***
-  if (!cfg.containsKey("config") || strcmp((const char*)cfg["config"], "done")) {
-    configDevice();
+  if (!ConfigPortal::cfg.containsKey("config") || strcmp((const char*)ConfigPortal::cfg["config"], "done")) {
+    ConfigPortal::serverStart();
   }
-  
+
   // Normal startup, no config
   WiFi.mode(WIFI_STA);
-  WiFi.begin((const char*)cfg["ssid"], (const char*)cfg["w_pw"]);
+  WiFi.begin((const char*)ConfigPortal::cfg["wifi_ssid"], (const char*)ConfigPortal::cfg["wifi_pwd"]);
   while (WiFi.status() != WL_CONNECTED) {
     delay(500);
     Serial.print(".");
@@ -123,4 +136,5 @@ void setup() {
 }
 
 void loop() {
+  ConfigPortal::serverLoop();
 }
