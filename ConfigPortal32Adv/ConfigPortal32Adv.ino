@@ -9,12 +9,12 @@ String user_config_html = "";
 // groupName, input type, name, placeholder string, value (optional), checked (optional)
 ConfigPortal::InputField myInputs[] = {
   // Basic text input
-  { "WiFi", "text", "wifi_ssid", "SSID", "", false },
-  { "WiFi", "password", "wifi_pwd", "Password", "", false },
+  { "WiFi", ConfigPortal::input_text, "wifi_ssid", "SSID", "", false },
+  { "WiFi", ConfigPortal::input_password, "wifi_pwd", "Password", "", false },
   // SSID list
-  { "WiFi", "ssid", "wifi_ssid", "Select WiFi network", nullptr, true },
+  { "WiFi", ConfigPortal::input_ssid, "wifi_ssid", "Select WiFi network", nullptr, true },
   // Basic text input
-  { "Basic", "text", "dev_name", "Device Name", "ESP32-C3", false },
+  { "Basic", ConfigPortal::input_text, "dev_name", "Device Name", "ESP32-C3", false },
   // Basic text input - Client id
   { "Basic", "text", "client_name", "Client Name", "ESP32-C3", false },
   // Basic text input - Client password
@@ -80,6 +80,11 @@ void testLittleFS() {
 }
 
 bool ConfigChanging() {
+  // What we can do here:
+  // - Check a value with a specific key in the ConfigPortal::cfg JSON document
+  // - Modify the value if needed
+  // - Store the value back in the cfg JSON document
+  // - The modified cfg then gets saved to the file system by ConfigPortal
   Serial.println("ConfigChanging invoked");
 
   // check max_clients
@@ -95,6 +100,8 @@ bool ConfigChanging() {
 }
 
 void ConfigChanged() {
+  // This is invoked after the configuration is saved to the file system 
+  // The consistent configuration lives in the ConfigPortal::cfg JSON document
   Serial.println("ConfigChanged invoked");
 }
 
@@ -110,8 +117,9 @@ void setup() {
   ConfigPortal::loadConfig();
   ConfigPortal::registerConfigChanging(ConfigChanging);
   ConfigPortal::registerConfigChanged(ConfigChanged);
-  // TODO: the configDevice() call needs to be removed in production
   ConfigPortal::serverStart();
+  
+  // TODO: This needs to be tuned in production
   return;
 
   // *** If no "config" is found or "config" is not "done", run configDevice ***

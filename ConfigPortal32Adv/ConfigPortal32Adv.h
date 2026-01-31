@@ -14,6 +14,31 @@
  *
  *  
  *  Modified by Djordje Herceg
+ *  31.1.2026.
+    - Substantially modified to include serverStart(), serverLoop() and serverStop() functions.
+    - To configure and start the server:
+      Define the inputs:
+      // groupName, input type, name, placeholder string, value (optional), checked (optional)
+      ConfigPortal::InputField myInputs[] = {
+        // Basic text input
+        { "WiFi", "text", "wifi_ssid", "SSID", "", false },
+        { "WiFi", "password", "wifi_pwd", "Password", "", false },
+        etc...
+
+      // init the portal
+      ConfigPortal::ssid_pfix = "CaptivePortal";
+      ConfigPortal::loadConfig();
+      ConfigPortal::registerConfigChanging(ConfigChanging);
+      ConfigPortal::registerConfigChanged(ConfigChanged);
+      ConfigPortal::serverStart();
+    
+    Then, call serverLoop() often from loop(). Or use FreeRTOS.
+    Allowed input types:
+    "text", "password", "checkbox", "radio", "email", "number", "time", "date", "color", "ssid"
+
+    The type "ssid" produces a dropdown which is populated by scanning the available wireless networks each time.
+    Input names "wifi_ssid" and "wifi_pwd" are hardcoded.
+
  *  15.8.2025.
  *  - Added styles for input field labels and placeholders
  *  - Added the InputField and InputGroup structs to help group settings into WiFi and Other
@@ -21,6 +46,7 @@
  *  - Added pre-loading existing settings into the Config page
  *  - The sketch uses almost 1Mb of flash, you might want to increase the firmware partition size in ESP32
  */
+
 
 
 #include <WiFi.h>
@@ -35,6 +61,18 @@
 
 
 namespace ConfigPortal {
+
+// supported input types 
+const char* input_text = "text";
+const char* input_password = "password";
+const char* input_checkbox = "checkbox";
+const char* input_radio = "radio";
+const char* input_email = "email";
+const char* input_number = "number";
+const char* input_date = "date";
+const char* input_time = "time";
+const char* input_color = "color";
+const char* input_ssid = "ssid";
 
 struct InputField {
   const char* inputGroup;  // Name of the input group. Subsequent fields in the same group are grouped in html.
@@ -275,16 +313,16 @@ void html_endGroup(String& html) {
  * and optionally the "checked" attribute for checkbox or radio inputs.
  *
  * @param html         Reference to the HTML string to append to.
- * @param type         "text", "password", "checkbox", "radio", "email", "number", "date", "ssid"
+ * @param type         "text", "password", "checkbox", "radio", "email", "number", "time", "date", "color", "ssid"
  * @param fieldName    Name attribute of the input field.
  * @param placeholder  Placeholder text shown inside the input field (optional).
  * @param fieldValue   Default value of the input field (optional).
  * @param checked      Whether the input should be marked as checked (for checkbox/radio).
  */
 void html_appendInput(String& html, const char* type, const char* fieldName, const char* placeholderText, const char* fieldValue, bool checked = false) {
-  bool isCheckbox = (strcmp(type, "checkbox") == 0);
-  bool isRadio = (strcmp(type, "radio") == 0);
-  bool isSSID = (strcmp(type, "ssid") == 0);
+  bool isCheckbox = (strcmp(type, input_checkbox) == 0);
+  bool isRadio = (strcmp(type, input_radio) == 0);
+  bool isSSID = (strcmp(type, input_ssid) == 0);
   bool isTextual = !isCheckbox && !isRadio && !isSSID;
 
   if (isTextual) {
